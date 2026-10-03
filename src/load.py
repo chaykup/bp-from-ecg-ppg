@@ -11,15 +11,7 @@ def load_record(part: str, i: int) -> tuple[str, np.ndarray, np.ndarray, np.ndar
         ppg, abp, ecg = rec
     return record_id, ppg.astype(np.float64), abp.astype(np.float64), ecg.astype(np.float64)
 
-
-def main():
-    part = "data/raw/Part_1.mat"
-    record_id, ppg, abp, ecg = load_record(part, 0)
-    print(f"\nRECORD ID: {record_id}")
-    print(f"PPG rows: {len(ppg)}, ABP rows: {len(abp)}, ECG rows: {len(ecg)}")
-    print(f"DATA TYPES: {ppg.dtype, abp.dtype, ecg.dtype}\n")
-
-    # fig, ax = plt.subplots(nrows=2, ncols=1, figsize=(6, 15))
+def plot_waveforms(ppg: np.ndarray, ecg: np.ndarray, abp: np.ndarray):
     fig, ax = plt.subplots(3, 1, sharex=True)
     ax[0].plot((np.arange(len(ppg))/125), ppg, label='PPG', color='green')
     ax[0].grid()
@@ -75,6 +67,16 @@ def main():
 
     fig.canvas.mpl_connect('scroll_event', on_scroll)
     plt.show()
+
+
+def main():
+    part = "data/raw/Part_1.mat"    # Set raw .mat file
+    record_id, ppg, abp, ecg = load_record(part, 0) # load_record(<raw mat file>, <observation index>)
+    plot_waveforms(ppg, ecg, abp)
+    print(f"\nRECORD ID: {record_id}")
+    print(f"PPG rows: {len(ppg)}, ABP rows: {len(abp)}, ECG rows: {len(ecg)}")
+    print(f"DATA TYPES: {ppg.dtype, abp.dtype, ecg.dtype}\n")
+    print(len(ecg))
 
 if __name__ == "__main__":
     main()
