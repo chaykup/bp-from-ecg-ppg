@@ -37,7 +37,7 @@ sys_peaks_idx, sys_properties = find_peaks(abp_cleaned, distance=40, prominence=
 dys_troughs_idx, dys_properties = find_peaks(-abp_cleaned, distance=40, prominence=0.1)
 
 # Overlay plot of raw vs clean ECG
-plt.plot((np.arange(len(ecg))), ecg, label='Raw', color='orange', linestyle='--')
+plt.plot((np.arange(len(ecg))), ecg, label='Raw', color='gold', linestyle='--')
 plt.plot((np.arange(len(ecg_cleaned))), ecg_cleaned, label='Cleaned', color='purple')
 plt.xlim(0, 250)
 plt.xlabel('Time(seconds)')
