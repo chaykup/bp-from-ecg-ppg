@@ -1,10 +1,11 @@
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
+from pathlib import Path
 
-def load_record(part: str, i: int) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
+def load_record(part: Path, i: int) -> tuple[str, np.ndarray, np.ndarray, np.ndarray]:
     with h5py.File(part, "r") as file:
-        part_name = list(file.keys())[1]
+        part_name = part.stem
         ref = file[part_name][i, 0]
         rec = file[ref][:].T
         record_id = part_name + '_Patient_' + str(i)
@@ -40,13 +41,8 @@ def plot_waveforms(ppg: np.ndarray, ecg: np.ndarray, abp: np.ndarray):
         xlim_range1 = cur_xmax1 - cur_xmin1
 
         cur_xmin2, cur_xmax2 = ax[1].get_xlim()
-        xlim_range2 = cur_xmax2 - cur_xmin2
-
         cur_xmin3, cur_xmax3 = ax[1].get_xlim()
-        xlim_range3 = cur_xmax3 - cur_xmin3
-
-        scale_factor = 0.01 * xlim_range1
-        scale_factor = 0.01 * xlim_range2
+        scale_factor = 0.02 * xlim_range1
 
         if event.button == 'up':
             ax[0].set_xlim([cur_xmin1 + scale_factor, cur_xmax1 + scale_factor])
@@ -70,13 +66,12 @@ def plot_waveforms(ppg: np.ndarray, ecg: np.ndarray, abp: np.ndarray):
 
 
 def main():
-    part = "data/raw/Part_1.mat"    # Set raw .mat file
+    part = Path("data/raw/Part_1.mat")    # Set raw .mat file
     record_id, ppg, abp, ecg = load_record(part, 0) # load_record(<raw mat file>, <observation index>)
     plot_waveforms(ppg, ecg, abp)
-    print(f"\nRECORD ID: {record_id}")
+    print(f"\nRecord ID: {record_id}")
     print(f"PPG rows: {len(ppg)}, ABP rows: {len(abp)}, ECG rows: {len(ecg)}")
-    print(f"DATA TYPES: {ppg.dtype, abp.dtype, ecg.dtype}\n")
-    print(len(ecg))
+    print(f"Data Types: {ppg.dtype, abp.dtype, ecg.dtype}\n")
 
 if __name__ == "__main__":
     main()
