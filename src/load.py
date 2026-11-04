@@ -12,6 +12,11 @@ def load_record(part: Path, i: int) -> tuple[str, np.ndarray, np.ndarray, np.nda
         ppg, abp, ecg = rec
     return record_id, ppg.astype(np.float64), abp.astype(np.float64), ecg.astype(np.float64)
 
+def n_records(part: Path) -> int:
+    """Number of records in one Part_*.mat file."""
+    with h5py.File(part, "r") as file:
+        return file[part.stem].shape[0]
+
 def plot_waveforms(ppg: np.ndarray, ecg: np.ndarray, abp: np.ndarray):
     fig, ax = plt.subplots(3, 1, sharex=True)
     ax[0].plot((np.arange(len(ppg))/125), ppg, label='PPG', color='green')

@@ -14,19 +14,30 @@ ABP_PROMINENCE = 15     # mmHg
 
 # Label bounds - physiological range
 SBP_BOUNDS = (80, 180)  # mmHg
-DBP_BOUNDS = (60, 130)  # mmHg
+# DBP lower bound 40, not 60: AAMI/ISO 81060-2 requires >5% of reference DBP <= 60 mmHg, and PulseDB
+# (Wang et al. 2023) argues against the >60 cutoff older studies used. 60 cut 32% of Part_1 windows
+# (median DBP 63.8); none fall below 45, so 40 only catches artefacts.
+DBP_BOUNDS = (40, 130)  # mmHg
 
 # Windowing - at least MIN_BEATS beats at HR_MIN, short enough that BP is roughly constant
 WINDOW_S = 8                # seconds
 WINDOW = WINDOW_S * FS      # samples (1000)
 MIN_BEATS = 4               # fewest beats for a median label that resists one bad peak
+BEAT_COUNT_TOL = 1          # max |ECG or PPG beats - ABP beats| per window. 96% of windows differ by 0-1 (an edge beat);
+                            # 2+ means missed or doubled beats, e.g. NeuroKit finds 19 R-peaks vs 50 ABP beats on Part_3_Patient_0
+
+# Flat-signal rejection - window std below this is a disconnected lead or stuck sensor.
+# Smallest stds seen on 100 Part_1 records: ECG 0.03, PPG 0.11, ABP 3.3 mmHg, so these only catch dead signals.
+FLAT_STD = {"ecg": 0.01, "ppg": 0.01, "abp": 1.0}
 
 # ECG peak-count sanity check - SciPy find_peaks vs NeuroKit on the cleaned ECG
 ECG_SCIPY_PROMINENCE_FRAC = 0.3     # prominence as a fraction of the 1st-99th pct ECG range (counts stable 0.2-0.5)
 PEAK_COUNT_TOL = 0.10               # flag when counts differ by more than 10% ...
 PEAK_COUNT_MIN_DIFF = 2             # ... and by more than this many beats (edge beats make short records differ by 1)
 
-# Pulse arrival time - shorter than pre-ejection period or longer than this is a mismatched beat
-PAT_BOUNDS = (0.1, 0.6)     # seconds
+# Pulse arrival time - shorter than pre-ejection period or longer than this is a mismatched beat.
+# Upper bound 0.8, not 0.6: MIMIC has an unknown ECG-PPG device delay (PulseDB: up to 500 ms), so measured
+# R->foot is ~0.47 s (5-95th pct 0.27-0.55) and R->peak ~0.65 s across 94 records from all four Parts.
+PAT_BOUNDS = (0.1, 0.8)     # seconds
 
 RANDOM_STATE = 42
