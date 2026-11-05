@@ -45,6 +45,7 @@ def process_record(ppg: np.ndarray, abp: np.ndarray, ecg: np.ndarray) -> dict:
         "ppg": ppg_cleaned,
         "ppg_raw": ppg,     # raw PPG keeps its DC level, needed for PIR
         "abp": abp_cleaned,
+        "abp_raw": abp,     # raw ABP for the clipping check; the low-pass filter smooths a clipped plateau
         "r_peaks": r_peaks,
         "ppg_peaks": ppg_peaks,
         "ppg_foot": ppg_foot,
@@ -71,12 +72,26 @@ SIGNALS = ("ecg", "ppg", "abp")
 PEAKS = ("r_peaks", "ppg_peaks", "sys_peaks", "dia_troughs")
 
 # Rejection reasons, checked in this order. Each rejected window counts once, under its first failing reason.
-REASONS = ("nan", "flat", "too_few_beats", "beat_count_mismatch", "hr_out_of_range", "sbp_out_of_bounds", "dbp_out_of_bounds")
+REASONS = ("nan", "flat", "abp_clipped", "too_few_beats", "beat_count_mismatch", "hr_out_of_range", "sbp_out_of_bounds", "dbp_out_of_bounds")
 
 
 def _peaks_in(idx: np.ndarray, start: int, end: int) -> np.ndarray:
     """Peaks detected on the whole record that fall inside [start, end)."""
     return idx[(idx >= start) & (idx < end)]
+
+
+def _longest_run(mask: np.ndarray) -> int:
+    """Length of the longest run of True in a boolean array."""
+    if not mask.any():
+        return 0
+    edges = np.diff(np.concatenate(([0], mask.astype(np.int8), [0])))
+    return int((np.flatnonzero(edges == -1) - np.flatnonzero(edges == 1)).max())
+
+
+def is_clipped(abp_raw: np.ndarray) -> bool:
+    """True when raw ABP plateaus at its max or min for config.CLIP_RUN+ samples (transducer saturation)."""
+    return any(_longest_run(np.abs(abp_raw - ref) < config.CLIP_EPS) >= config.CLIP_RUN
+               for ref in (abp_raw.max(), abp_raw.min()))
 
 
 def window_record(record_id: str, rec: dict) -> tuple[list[dict], Counter]:
@@ -100,6 +115,8 @@ def window_record(record_id: str, rec: dict) -> tuple[list[dict], Counter]:
             reason = "nan"
         elif any(np.std(sig[k]) < config.FLAT_STD[k] for k in SIGNALS):
             reason = "flat"
+        elif is_clipped(rec["abp_raw"][start:end]):
+            reason = "abp_clipped"
         elif any(len(p) < config.MIN_BEATS for p in pk.values()):
             reason = "too_few_beats"
         elif any(abs(len(pk[k]) - len(pk["sys_peaks"])) > config.BEAT_COUNT_TOL for k in ("r_peaks", "ppg_peaks")):

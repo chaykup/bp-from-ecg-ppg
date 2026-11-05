@@ -1,3 +1,5 @@
+import hashlib
+
 import h5py
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,6 +18,31 @@ def n_records(part: Path) -> int:
     """Number of records in one Part_*.mat file."""
     with h5py.File(part, "r") as file:
         return file[part.stem].shape[0]
+
+def find_duplicates(jobs: list[tuple[Path, int]], n_samples: int) -> dict[str, str]:
+    """Find records that are copies of an earlier one, e.g. Part_1_Patient_1055-1067 == Part_3_Patient_2965-2977.
+
+    Two records count as copies when their first n_samples of all three signals match (rounded to 4 decimals),
+    so a copy cut to a different length still matches. jobs is a list of (part path, index) in file order.
+    Returns {duplicate record_id: record_id of the first copy, which is kept}.
+    """
+    first_seen, dups = {}, {}
+    by_part = {}
+    for part, i in jobs:
+        by_part.setdefault(part, []).append(i)
+    for part, idx in by_part.items():
+        with h5py.File(part, "r") as file:
+            refs = file[part.stem]
+            for i in idx:
+                head = file[refs[i, 0]][:n_samples]     # (n_samples, 3): stored column-major, so rows are samples
+                key = hashlib.sha1(np.round(head.astype(np.float64), 4).tobytes()).hexdigest()
+                record_id = f"{part.stem}_Patient_{i}"
+                if key in first_seen:
+                    dups[record_id] = first_seen[key]
+                else:
+                    first_seen[key] = record_id
+    return dups
+
 
 def plot_waveforms(ppg: np.ndarray, ecg: np.ndarray, abp: np.ndarray):
     fig, ax = plt.subplots(3, 1, sharex=True)

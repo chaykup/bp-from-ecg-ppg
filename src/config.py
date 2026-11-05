@@ -30,6 +30,13 @@ BEAT_COUNT_TOL = 1          # max |ECG or PPG beats - ABP beats| per window. 96%
 # Smallest stds seen on 100 Part_1 records: ECG 0.03, PPG 0.11, ABP 3.3 mmHg, so these only catch dead signals.
 FLAT_STD = {"ecg": 0.01, "ppg": 0.01, "abp": 1.0}
 
+# ABP clipping - some records' transducer saturates, e.g. Part_2_Patient_1573 sits at exactly 148.02 mmHg for 14% of samples,
+# so the SBP label is the clip level. Reject a window when raw ABP stays within CLIP_EPS of its window max or min for
+# CLIP_RUN+ consecutive samples. On 240 random records the longest plateau is 1-3 samples on normal windows and 11-13
+# on clipped ones; real peaks change by more than 0.05 mmHg over 40 ms.
+CLIP_EPS = 0.05     # mmHg
+CLIP_RUN = 5        # samples (40 ms)
+
 # ECG peak-count sanity check - SciPy find_peaks vs NeuroKit on the cleaned ECG
 ECG_SCIPY_PROMINENCE_FRAC = 0.3     # prominence as a fraction of the 1st-99th pct ECG range (counts stable 0.2-0.5)
 PEAK_COUNT_TOL = 0.10               # flag when counts differ by more than 10% ...

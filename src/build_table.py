@@ -4,8 +4,10 @@ Usage (from the repo root):
     python src/build_table.py              # full run, all records in all four Parts
     python src/build_table.py --limit 100  # first 100 records of each Part, for testing
 
-Also writes data/processed/build_log.json with the window rejection counts, failed records and records
-flagged by the ECG peak-count check.
+Records that are copies of an earlier record (see load.find_duplicates) are skipped.
+
+Also writes data/processed/build_log.json with the window rejection counts, failed records, dropped
+duplicates and records flagged by the ECG peak-count check.
 """
 import argparse
 import json
@@ -18,7 +20,8 @@ from pathlib import Path
 import pandas as pd
 
 from features import FEATURE_COLS, extract_features
-from load import load_record, n_records
+import config
+from load import find_duplicates, load_record, n_records
 from signals import REASONS, ecg_peak_count_check, process_record, window_record
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +59,12 @@ def main():
         part = RAW_DIR / f"{name}.mat"
         n = n_records(part)
         jobs += [(part, i) for i in range(min(n, args.limit) if args.limit else n)]
-    print(f"{len(jobs)} records from {len(PARTS)} Parts")
+    n_scanned = len(jobs)
+
+    # Drop records that are copies of an earlier one, so the same recording can't land in both train and test
+    duplicates = find_duplicates(jobs, config.WINDOW)
+    jobs = [(part, i) for part, i in jobs if f"{part.stem}_Patient_{i}" not in duplicates]
+    print(f"{n_scanned} records from {len(PARTS)} Parts, {len(duplicates)} duplicates dropped, {len(jobs)} to process")
 
     rows, counts, failed, flagged = [], Counter(), [], []
     start = time.time()
@@ -80,6 +88,8 @@ def main():
 
     total = sum(counts.values())
     log = {
+        "records_scanned": n_scanned,
+        "records_duplicate_dropped": len(duplicates),
         "records": len(jobs),
         "records_failed": len(failed),
         "records_ecg_peak_count_flagged": len(flagged),
@@ -87,6 +97,7 @@ def main():
         "windows": {r: counts[r] for r in ("kept",) + REASONS},
         "failed": failed,
         "ecg_peak_count_flagged": flagged,
+        "duplicates_dropped": duplicates,   # {dropped copy: kept original}
     }
     with open(args.out.parent / "build_log.json", "w") as f:
         json.dump(log, f, indent=2)
