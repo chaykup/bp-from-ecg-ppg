@@ -1,10 +1,10 @@
-"""Exploratory analysis of the feature table for the Phase 2 report (dev guide Step 7).
+"""Exploratory analysis of the feature table.
 
 Usage (from the repo root, after build_table.py):
     python src/eda.py
 
 Reads data/processed/features.parquet and build_log.json, saves figures to figures/eda/ and prints
-the numbers the Phase 2 sections quote: rejection counts, missing values, IQR outliers and how much of
+summary numbers: rejection counts, missing values, IQR outliers and how much of
 the BP variance sits between records rather than within them.
 """
 import json
@@ -117,7 +117,7 @@ def plot_pat_vs_sbp(df: pd.DataFrame, records: list[str], r_within: pd.Series):
 
 
 def plot_rejections(log: dict):
-    """Bar chart of why windows were rejected in Step 4."""
+    """Bar chart of why windows were rejected during windowing (signals.window_record)."""
     w = {k: v for k, v in log["windows"].items() if k != "kept" and v > 0}
     w = dict(sorted(w.items(), key=lambda kv: kv[1]))
     fig, ax = plt.subplots(figsize=(7, 3))

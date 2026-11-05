@@ -47,4 +47,17 @@ PEAK_COUNT_MIN_DIFF = 2             # ... and by more than this many beats (edge
 # R->foot is ~0.47 s (5-95th pct 0.27-0.55) and R->peak ~0.65 s across 94 records from all four Parts.
 PAT_BOUNDS = (0.1, 0.8)     # seconds
 
+# Model inputs (pipeline.py). The table keeps all features; these choices apply when models are trained.
+# SDNN is dropped: r = 0.98 with RMSSD, and SDNN needs ~5 min of beats to mean much (8 s windows); RMSSD is the
+# accepted short-term HRV measure. Other correlated pairs (amplitude/area 0.84, PAT foot/rise time -0.79) stay.
+DROPPED_FEATURES = ["hrv_sdnn_ms"]
+# Outliers: no rows are removed. 1.5 x IQR flags 12-19% of windows on several features because the distributions are
+# skewed or bimodal (PPG gain, arrhythmias), not because the values are wrong. Fixed (not data-fitted) transforms instead:
+LOG_FEATURES = ["hrv_rmssd_ms"]    # log1p: skew 3.7 -> 1.1
+PIR_MAX = 5.0                      # PIR above 5 comes from a raw PPG foot near 0 (9 windows; 99.9th pct is 3.1)
+
+# Train/test split (split.py) - grouped by record so no record's windows are on both sides
+TEST_SIZE = 0.2
+CV_FOLDS = 5
+
 RANDOM_STATE = 42
